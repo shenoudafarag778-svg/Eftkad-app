@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>خدمة الافتقاد الرعوي</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        /* أنيميشن الانتقال المتطور */
+        @keyframes slideInUp {
+            from {
+                opacity: 0;
+                transform: translateY(15px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .animate-tab-content {
+            animation: slideInUp 0.4s ease-out forwards;
+        }
+
+        ::-webkit-scrollbar {
+            width: 5px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #4f46e5;
+            border-radius: 10px;
+        }
+    </style>
+    <link rel="manifest" href="./manifest.json">
+    <meta name="theme-color" content="#4f46e5">
+</head>
+
+<body class="bg-gray-50 text-gray-800 pb-24 relative min-h-screen">
+
+    <!-- Header -->
+    <header class="bg-indigo-600 text-white p-4 shadow-md flex items-center justify-center gap-3 sticky top-0 z-10">
+        <i class="fa-solid fa-church text-2xl"></i>
+        <h1 class="text-xl font-bold">الافتقاد الرعوي</h1>
+    </header>
+
+    <!-- Notification CTA -->
+    <div id="notificationCard"
+        class="m-4 bg-gradient-to-r from-indigo-500 to-indigo-700 rounded-xl shadow-lg p-4 flex items-center justify-between text-white cursor-pointer transition transform active:scale-95"
+        onclick="requestNotificationPermission()">
+        <div class="flex items-center gap-4">
+            <div class="bg-white/20 p-3 rounded-full flex items-center justify-center">
+                <i class="fa-solid fa-bell text-xl animate-bounce"></i>
+            </div>
+            <div>
+                <h3 class="font-bold">تفعيل التنبيهات</h3>
+                <p class="text-xs text-indigo-100">احصل على تذكير يومي بالزيارات</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="flex justify-center border-b mx-4 mt-2 bg-white rounded-t-lg shadow-sm overflow-hidden">
+        <button onclick="switchTab('pending')" id="tab-pending"
+            class="w-1/2 py-3 text-center border-b-2 font-semibold text-indigo-600 border-indigo-600 transition-colors">
+            قيد الافتقاد (<span id="count-pending">0</span>)
+        </button>
+        <button onclick="switchTab('visited')" id="tab-visited"
+            class="w-1/2 py-3 text-center border-b-2 font-semibold text-gray-500 border-transparent transition-colors">
+            تم الافتقاد (<span id="count-visited">0</span>)
+        </button>
+    </div>
+
+    <!-- القائمة (الكروت) -->
+    <div id="familiesList" class="p-4 space-y-4 animate-tab-content"></div>
+
+    <!-- زر الإضافة العائم -->
+    <button onclick="openModal('addFamilyModal')"
+        class="fixed bottom-6 left-6 bg-indigo-600 text-white w-14 h-14 rounded-full shadow-2xl flex items-center justify-center text-2xl hover:bg-indigo-700 transition transform active:scale-90 z-20">
+        <i class="fa-solid fa-plus"></i>
+    </button>
+
+    <!-- Modal: إضافة أسرة -->
+    <div id="addFamilyModal"
+        class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto">
+            <div class="p-4 border-b flex justify-between items-center sticky top-0 bg-white z-10">
+                <h2 class="text-lg font-bold text-indigo-600">إضافة أسرة جديدة</h2>
+                <button onclick="closeModal('addFamilyModal')" class="text-gray-400 hover:text-red-500 text-xl"><i
+                        class="fa-solid fa-xmark"></i></button>
+            </div>
+            <form id="familyForm" onsubmit="saveFamily(event)" class="p-4 space-y-4">
+
+                <input type="text" id="headName" placeholder="اسم رب الأسرة"
+                    class="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-indigo-500 outline-none">
+
+                <input type="tel" id="phone" placeholder="رقم الهاتف"
+                    class="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-indigo-500 outline-none">
+
+                <div class="bg-gray-50 p-3 rounded-lg border border-gray-100">
+                    <label class="block text-sm text-gray-600 mb-2">عدد أفراد الأسرة:</label>
+                    <input type="number" id="memberCount" placeholder="0" min="0" oninput="generateMemberInputs()"
+                        class="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-indigo-500 outline-none mb-2">
+                    <div id="membersContainer" class="space-y-2 empty:hidden"></div>
+                </div>
+
+                <input type="text" id="address" placeholder="العنوان"
+                    class="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-indigo-500 outline-none">
+
+                <div>
+                    <label class="block text-sm text-gray-600 mb-1 ml-1">تاريخ الزيارة:</label>
+                    <input type="date" id="visitDate"
+                        class="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-indigo-500 outline-none">
+                </div>
+
+                <button type="submit"
+                    class="w-full bg-indigo-600 text-white font-bold rounded-lg p-3 mt-4 hover:bg-indigo-700 transition">حفظ
+                    الأسرة</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: الملاحظات الرعوية -->
+    <div id="notesModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl shadow-xl w-full max-w-md">
+            <div class="p-4 border-b flex justify-between items-center bg-yellow-50 rounded-t-xl">
+                <h2 class="text-lg font-bold text-yellow-700"><i class="fa-solid fa-note-sticky mr-2"></i> الملاحظات
+                    الرعوية</h2>
+                <button onclick="closeModal('notesModal')" class="text-gray-400 hover:text-red-500 text-xl"><i
+                        class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="p-4">
+                <input type="hidden" id="noteFamilyId">
+                <textarea id="pastoralNotes" rows="6" placeholder="اكتب مشكلة، طلب مساعدة، أو ملاحظات صلاة..."
+                    class="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-yellow-500 outline-none resize-none"></textarea>
+                <button onclick="saveNotes()"
+                    class="w-full bg-yellow-500 text-white font-bold rounded-lg p-3 mt-4 hover:bg-yellow-600 transition shadow-sm">حفظ
+                    الملاحظات</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let families = JSON.parse(localStorage.getItem('pastoral_families')) || [];
+        let currentTab = 'pending';
+
+        function switchTab(tab) {
+            currentTab = tab;
+            const list = document.getElementById('familiesList');
+
+            // إعادة تشغيل الأنيميشن
+            list.classList.remove('animate-tab-content');
+            void list.offsetWidth;
+            list.classList.add('animate-tab-content');
+
+            // تنسيق الأزرار
+            document.getElementById('tab-pending').className = tab === 'pending' ? "w-1/2 py-3 text-center border-b-2 font-semibold text-indigo-600 border-indigo-600 transition-colors" : "w-1/2 py-3 text-center border-b-2 font-semibold text-gray-500 border-transparent transition-colors";
+            document.getElementById('tab-visited').className = tab === 'visited' ? "w-1/2 py-3 text-center border-b-2 font-semibold text-indigo-600 border-indigo-600 transition-colors" : "w-1/2 py-3 text-center border-b-2 font-semibold text-gray-500 border-transparent transition-colors";
+
+            renderFamilies();
+        }
+
+        function renderFamilies() {
+            const list = document.getElementById('familiesList');
+            list.innerHTML = '';
+            const filtered = families.filter(f => f.status === currentTab);
+
+            // تحديث العدادات
+            document.getElementById('count-pending').innerText = families.filter(f => f.status === 'pending').length;
+            document.getElementById('count-visited').innerText = families.filter(f => f.status === 'visited').length;
+
+            if (filtered.length === 0) {
+                list.innerHTML = `<div class="text-center text-gray-400 mt-10"><i class="fa-solid fa-folder-open text-4xl mb-3"></i><p>لا توجد بيانات هنا</p></div>`;
+                return;
+            }
+
+            filtered.forEach(family => {
+                // تحديد شكل زر الحالة بناءً على التبويب الحالي
+                let statusButtonHTML = '';
+                if (currentTab === 'pending') {
+                    statusButtonHTML = `<button onclick="toggleStatus(${family.id})" class="flex-1 bg-green-50 text-green-600 py-2 rounded-lg text-sm font-semibold hover:bg-green-100 transition"><i class="fa-solid fa-check mr-1"></i> تم الافتقاد</button>`;
+                } else {
+                    statusButtonHTML = `<button onclick="toggleStatus(${family.id})" class="flex-1 bg-gray-100 text-gray-600 py-2 rounded-lg text-sm font-semibold hover:bg-gray-200 transition"><i class="fa-solid fa-rotate-left mr-1"></i> تراجع</button>`;
+                }
+
+                list.innerHTML += `
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4 relative overflow-hidden">
+                        <div class="absolute top-0 right-0 w-2 h-full ${currentTab === 'visited' ? 'bg-green-500' : 'bg-indigo-500'}"></div>
+                        <h3 class="font-bold text-lg text-gray-800">${family.headName || 'أسرة بدون اسم'}</h3>
+                        <p class="text-sm text-gray-500 mt-1"><i class="fa-solid fa-phone w-4"></i> ${family.phone || 'غير مسجل'}</p>
+                        ${family.address ? `<p class="text-sm text-gray-500 mt-1"><i class="fa-solid fa-location-dot w-4"></i> ${family.address}</p>` : ''}
+                        ${family.visitDate ? `<p class="text-sm text-indigo-600 font-semibold mt-1"><i class="fa-regular fa-calendar w-4"></i> ${family.visitDate}</p>` : ''}
+                        
+                        <div class="mt-4 flex gap-2">
+                            ${statusButtonHTML}
+                            <button onclick="openNotes(${family.id})" class="flex-1 bg-yellow-50 text-yellow-600 py-2 rounded-lg text-sm font-semibold hover:bg-yellow-100 transition"><i class="fa-solid fa-pen-to-square mr-1"></i> الملاحظات</button>
+                            <button onclick="deleteFamily(${family.id})" class="text-red-500 bg-red-50 rounded-lg px-4 hover:bg-red-100 transition"><i class="fa-solid fa-trash"></i></button>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        function generateMemberInputs() {
+            const count = parseInt(document.getElementById('memberCount').value) || 0;
+            const container = document.getElementById('membersContainer');
+            container.innerHTML = '';
+
+            if (count > 0) {
+                for (let i = 1; i <= count; i++) {
+                    container.innerHTML += `<input type="text" placeholder="اسم الفرد ${i}" class="member-name-input w-full border border-gray-200 rounded-lg p-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none mb-1 bg-white">`;
+                }
+            }
+        }
+
+        function saveFamily(e) {
+            e.preventDefault();
+
+            // جمع أسماء الأفراد
+            const memberInputs = document.querySelectorAll('.member-name-input');
+            let membersList = [];
+            memberInputs.forEach(input => {
+                if (input.value.trim() !== '') membersList.push(input.value);
+            });
+
+            const newFamily = {
+                id: Date.now(),
+                headName: document.getElementById('headName').value,
+                phone: document.getElementById('phone').value,
+                address: document.getElementById('address').value,
+                visitDate: document.getElementById('visitDate').value,
+                memberCount: document.getElementById('memberCount').value,
+                members: membersList,
+                notes: '', // ملاحظات فارغة في البداية
+                status: 'pending'
+            };
+
+            families.push(newFamily);
+            localStorage.setItem('pastoral_families', JSON.stringify(families));
+
+            // تفريغ النموذج وإغلاقه
+            document.getElementById('familyForm').reset();
+            document.getElementById('membersContainer').innerHTML = '';
+            closeModal('addFamilyModal');
+            renderFamilies();
+        }
+
+        function toggleStatus(id) {
+            families = families.map(f => f.id === id ? { ...f, status: f.status === 'pending' ? 'visited' : 'pending' } : f);
+            localStorage.setItem('pastoral_families', JSON.stringify(families));
+            renderFamilies();
+        }
+
+        function deleteFamily(id) {
+            if (confirm('هل أنت متأكد من حذف هذه الأسرة؟')) {
+                families = families.filter(f => f.id !== id);
+                localStorage.setItem('pastoral_families', JSON.stringify(families));
+                renderFamilies();
+            }
+        }
+
+        function openModal(id) { document.getElementById(id).classList.remove('hidden'); }
+        function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+
+        function openNotes(id) {
+            document.getElementById('noteFamilyId').value = id;
+            document.getElementById('pastoralNotes').value = families.find(f => f.id === id).notes || '';
+            openModal('notesModal');
+        }
+
+        function saveNotes() {
+            const id = parseInt(document.getElementById('noteFamilyId').value);
+            families.find(f => f.id === id).notes = document.getElementById('pastoralNotes').value;
+            localStorage.setItem('pastoral_families', JSON.stringify(families));
+            closeModal('notesModal');
+        }
+
+        // إعدادات التنبيهات
+        function requestNotificationPermission() {
+            if (!("Notification" in window)) {
+                alert("متصفحك لا يدعم التنبيهات.");
+                return;
+            }
+            Notification.requestPermission().then(permission => {
+                if (permission === "granted") {
+                    document.getElementById('notificationCard').style.display = 'none';
+                }
+            });
+        }
+
+        window.onload = () => {
+            renderFamilies();
+            if (Notification.permission === 'granted') {
+                document.getElementById('notificationCard').style.display = 'none';
+            }
+        };
+        // تسجيل الـ Service Worker لتحويله لتطبيق
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(registration => console.log('ServiceWorker registered'))
+                    .catch(err => console.log('ServiceWorker failed: ', err));
+            });
+        }
+    </script>
+</body>
+
+</html>
